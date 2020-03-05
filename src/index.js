@@ -56,7 +56,7 @@ export function gblSolve(fun, xL, xU, options = {}, entries = {}) {
     minIndex = Math.min(...difference);
     let C = [];
     for (let i = 0; i < m; i++) {
-      C[i] = global.C(i).map((x) => x - (xL / (xU - xL)));
+      C[i] = global.C[i].map((x) => x - (xL[i] / (xU[i] - xL[i])));
     }
   } else {
     m = 1;
