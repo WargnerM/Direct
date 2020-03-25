@@ -28,25 +28,29 @@ export function gblSolve(fun, xL, xU, options = {}, entries = {}) {
     throw new Error('Lower bounds and Upper bounds for x are not of the same length');
   }
 
+  xL = Matrix.checkMatrix(xL);
+  xU = Matrix.checkMatrix(xU);
+
+  if (global.C) {
+    global.C = Matrix.checkMatrix(global.C);
+  }
+
   // *** Step 1: Inicialization
-  let funCalls = true;
+  let funCalls = 0;
   let convFlag = 0;
   let n = xL.length;
   let tolle = 1e-16;
   let tolle2 = 1e-12;
   let dMin = global.dMin;
+  let diffBorders = x_U.sub(x_L);
 
-  let F, m, D, L, d, fMin, epsilon, E, minIndex, iMin, f0;
-  if (global.C && global.C.length !== 0) {
-    F = global.F;
+  let m, CC, L, F, D, fMin, epsilon, E, minIndex, iMin, f0;
+  if (global.C.rows > 0) {
+    let { F, D, L, d, dMin} = global;
     m = F.length;
-    D = global.D;
-    L = global.L;
-    d = global.d;
-    dMin = global.dMin;
     epsilon = options.epsilon;
     fMin = Math.min(...F);
-    E = options.epsilon * Math.abs(fMin) > 1e-8 ? options.epsilon * Math.abs(fMin) : 1e-8;
+    E = epsilon * Math.abs(fMin) > 1e-8 ? epsilon * Math.abs(fMin) : 1e-8;
     let test = F.map((x) => x - (fMin + E));
     let difference = [];
 
@@ -54,39 +58,42 @@ export function gblSolve(fun, xL, xU, options = {}, entries = {}) {
       difference[i] = test[i] - D[i];
     }
     minIndex = Math.min(...difference);
-    let C = [];
+    let {rows, columns} = global.C;
+    C = new Matrix(rows, columns);
     for (let i = 0; i < m; i++) {
-      C[i] = global.C[i].map((x) => x - (xL[i] / (xU[i] - xL[i])));
+      let subMatrix = global.C.getColumnVector(i);
+      let newColumn = subMatrix.subM(xL).divM(diffBorders); // ( GLOBAL.C(:,i) - x_L ) ./ (x_U - x_L);
+      C.setColumn(i, newColumn);
     }
   } else {
     m = 1;
-    let C = new Array(n).fill(0.5);
-    let xM = [];
-    for (let i = 0; i < xL.length; i++) {
-      xM[i] = xL[i] + C[i] * (xU[i] - xL[i]);
-    }
-    let fMin = fun(xM);
+    let C = new Matrix(n, 1).fill(0.5);
+    let xM = xL.addM(C.mulM(diffBorders)); // x_L + C.*(x_U - x_L);
+    let fMin = fun(xM); // It should be a vector
     f0 = fMin;
     funCalls = funCalls + 1;
-    iMin = 1;
-    let L = new Array(n).fill(0.5);
-    let D = Math.sqrt(
-      L.reduce((a, b) => a + Math.pow(b, 2))
-    );
-    F = [fMin];
+    iMin = 0;
+    L = new Matrix(n, 1).fill(0.5);
+    D = [ Math.sqrt(n * Math.pow(0.5, 2)) ]; // sqrt(sum(L.^2)); 
+    
+    F = [ fMin ];
     d = D;
     dMin = fMin;
   }
 
+
+  // Until here the code is normalized to JS
   let S = [];
   let S_1 = [];
   let S_2 = [];
   let S_3 = [];
-  let t = 1;
-  while (t <= options.iterations) {
+  let t = 0;
+
+
+  while (t < options.iterations) {
     let idx;
-    for (let i = 0; i < D.length; i++) {
-      if (D[iMin] === d[i]) idx = i;
+    for (let i = 0; i < D.rows; i++) {
+      if (D.get(iMin, 1) === d[i]) idx = i;
     }
     let idx2;
     for (let i = idx; i < d.length; i++) {
