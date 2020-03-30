@@ -68,26 +68,25 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
       C[i] = global.C(i).map((x) => x - (xL / (xU - xL)));
     }
   } else {
-    m = 1;
-    C = new Array(n).fill(0.5);
+    m = 0;
+    C = [new Array(n).fill(0.5)];
     let xM = [];
     for (let i = 0; i < xL.length; i++) {
-      xM[i] = xL[i] + C[i] * (xU[i] - xL[i]);
+      xM[i] = xL[i] + C[0][i] * (xU[i] - xL[i]);
     }
     fMin = fun(xM);
     funCalls = funCalls + 1;
     iMin = 1;
-    L = new Array(n).fill(0.5);
+    L = [new Array(n).fill(0.5)];
     D = 0;
     for (let i = 0; i < L.length; i++) {
-      D += Math.pow(L[i], 2)
+      D += Math.pow(L[0][i], 2)
     }
     D = [Math.sqrt(D)];
     F = [fMin];
     d = D;
     dMin = fMin;
   }
-  
   let S = [];
   let S_1 = [];
   let S_2 = [];
@@ -97,7 +96,6 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
   //-------------------------------------------------------------------------
   //                          Iteration loop
   //-------------------------------------------------------------------------
-
   while (t < options.iterations) {
     //----------------------------------------------------------------------
     //  STEP 2. Identify the set S of all potentially optimal rectangles
@@ -135,52 +133,115 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
       S_3 = S_1;
     }
     S = S_3;
+    
     //--------------------------------------------------------------
     // STEPS 3,5: Select any rectangle j in S
     //--------------------------------------------------------------
+    for (let por = 0; por < S.length; por++) {
+      let j = S[por];
+      let maxL = Math.max(...L[j]);
+      let I = [];
+      for (let i = 0; i < L[j].length; i++) {
+        if (Math.abs(L[j][i] - maxL) < tolle) I.push(i)
+      }
+      let delta = (2 * maxL)/3;
+      let w = [];
+      for (let r = 0; r < I.length; r++) {
+        let i = I[r] + 1;
+        let eI = [1, 1];
+        if (i-1 > 0) {
+          eI[0] = 0;
+        } if (n - i > 0) {
+          eI[1] = 0;
+        }
+        let cm1 = []; let cm2 = [];
+        for (let i = 0; i < C[j].length; i++) {
+          cm1[i] = C[j][i] + (delta * eI[i]);
+          cm2[i] = C[j][i] - (delta * eI[i]);
+        }
+        let xm1 = []; let xm2 = [];
+        for (let i = 0; i < cm1.length; i++) {
+          xm1[i] = xL[i] + (cm1[i] * (xU[i] - xL[i]));
+          xm2[i] = xL[i] + (cm2[i] * (xU[i] - xL[i]));
+        }
+        let fm1 = fun(xm1);
+        let fm2 = fun(xm2);
+        funCalls++*2;
+        console.log(funCalls)
+        w[r] = Math.min(fm1, fm2);
+        C.push(cm1, cm2);
+        F.push(fm1, fm2);
+      }
 
+    let ws = w.slice().sort((a, c) => a - c)
+    let b = w.map((a, c) => ws.findIndex(y => y == w[c]));
+
+      for (let r = 0; r < I.length; r++) {
+        let u = I[b[r]];
+        let ix1 = m + (2 * (b[r] + 1)) - 1;
+        let ix2 = m + (2 * (b[r] + 1));
+        L[j][u] = delta / 2;
+        L[ix1] = L[j].slice()
+        L[ix2] = L[j].slice()
+        let item = 0
+        for (let i = 0; i < L[j].length; i++) {
+          item += L[j][i] * L[j][i]
+        }
+        D[j] = Math.sqrt(item);
+        D[ix1] = D[j];
+        D[ix2] = D[j];
+      }
+      console.log(D)
+      m = m + (2 * I.length);
+    }
     //--------------------------------------------------------------
     //                  Update
     //--------------------------------------------------------------
+    
     fMin = Math.min(...F);
     E = options.epsilon * Math.abs(fMin) > 1e-8 ? options.epsilon * Math.abs(fMin) : 1e-8;
-    let test = F.map((x) => x - (fMin + E));
-    let difference = [];
-    for (let i = 0; i < test.length; i++) {
-      difference[i] = test[i] - D[i];
+    let item = [];
+    for (let i = 0; i < F.length; i++) {
+      item[i] = (F[i] - (fMin + E))/D[i]
     }
-    let minIndex = Math.min(...difference);
-
+  
+    let minIndex = item.findIndex(x => x == Math.min(...item));
     let counter = 0;
-    while (counter < d.length) {
+    let st = 1;
+    while (counter < st) {
       let dTmp = d[counter];
-      let idx = d.findIndex(x => x != dTmp);
-      d = [dTmp];
-      for (let i = 0; i < idx.length; i++) {
-        d[i + 1] = d[idx[i]];
-      }
+      let idx = d.filter(x => x !== dTmp);
+      d = [dTmp, ...idx];
+      st = d.length;
       counter++
     }
-    d = d.sort((a, b) => a.from - b.from);
+    
+    d = d.sort((a, b) => a - b);
     dMin = [];
     for (let i = 0; i < d.length; i++) {
-      let idx1 = D.findIndex( x => x == d[i]);
+      let idx1 = [];
+      D.forEach(function(a, b) {
+        if (a === d[i]) {
+          idx1.push(b)
+        }
+      }, idx1)
       let fTmp = [];
-      for (let i = 0; i < idx1.length; i++) {
-        fTmp[i] = F[i];
+      for (let j = 0; j < idx1.length; j++) {
+        fTmp[j] = F[idx1[j]];
+        dMin[i] = Math.min(...fTmp);
       }
-      dMin[i] = Math.min(...fTmp);
     }
-
-    t = t + 1;
+    console.log(dMin)
+    t++
   }
+
   //--------------------------------------------------------------
   //                  Saving results
   //--------------------------------------------------------------
-
+  
   let result = {};
-  result.f_k = f_min; // Best function value
-  result.Iter = T; // Number of iterations
+  result.f_k = fMin; // Best function value
+  result.Iter = iterations; // Number of iterations
 
   CC = new Matrix(C.rows, C.columns);
   for (let i = 0; i < m; i++) { // Transform to original coordinates
@@ -220,5 +281,5 @@ function testFunction(x) {
 
 let xL = [-5, 0];
 let xU = [10, 15];
-let GLOBAL = { iterations: 20 };
+let GLOBAL = { iterations: 1 };
 let result = Direct(testFunction, xL, xU, GLOBAL);
