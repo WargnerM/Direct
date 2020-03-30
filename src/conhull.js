@@ -1,6 +1,6 @@
-import {Matrix, determinant} from 'ml-matrix';
+let { Matrix, determinant } = require('ml-matrix');
 
-export function conhull(x, y) {
+module.exports = function conhull(x, y) {
     Matrix.checkMatrix(x);
     Matrix.checkMatrix(y);
     if (x.rows === 1) x = x.transpose();
