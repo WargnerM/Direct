@@ -165,16 +165,15 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
         let fm1 = fun(xm1);
         let fm2 = fun(xm2);
         funCalls += 2;
-        w[r] = Math.min(fm1, fm2);
+        w[r] = [Math.min(fm1, fm2), r];
         C.push(cm1, cm2);
         F.push(fm1, fm2);
       }
 
-    let ws = w.slice().sort((a, c) => a - c)
-    let b = w.map((a, c) => ws.findIndex(y => y == w[c]));
+      let b = w.sort((a, b) => a[0] - b[0]);
 
       for (let r = 0; r < I.length; r++) {
-        let u = I[b[r]];
+        let u = I[b[r][1]];
         let ix1 = m + (2 * (b[r] + 1)) - 1;
         let ix2 = m + (2 * (b[r] + 1));
         L[j][u] = delta / 2;
@@ -204,31 +203,37 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
         prevValue = newValue;
       }
     }
-    // hasta aqui se modifico el codigo
-    let counter = 0;
-    let st = 1;
-    while (counter < st) {
-      let dTmp = d[counter];
-      let idx = d.filter(x => x !== dTmp);
-      d = [dTmp, ...idx];
-      st = d.length;
-      counter++
+    
+
+    for (let i = 0; i !== d.length; i++) {
+      let dTmp = d[i];
+      let idx = [];
+      for (let di = 0; di < d.length; di++) {
+        if (d[di] !== dTmp) idx.push(di);
+      }
+      let newD = new Array(idx.length + 1);
+      newD[0] = dTmp;
+      for (let k = 0, kk = 1; k < idx.length; k++) {
+        newD[kk++] = d[idx[k]];
+      }
+      d = newD;
     }
     
     d = d.sort((a, b) => a - b);
-    dMin = [];
+
+    dMin = new Array(d.length);
     for (let i = 0; i < d.length; i++) {
-      let idx1 = [];
-      D.forEach(function(a, b) {
-        if (a === d[i]) {
-          idx1.push(b)
+      let minIndex;
+      let minValue = Number.MAX_SAFE_INTEGER;
+      for (let k = 0; k < D.length; k++) {
+        if (D[k] === d[i]) {
+          if (F[k] < minValue) {
+            minValue = F[k];
+            minIndex = k;
+          }
         }
-      }, idx1)
-      let fTmp = [];
-      for (let j = 0; j < idx1.length; j++) {
-        fTmp[j] = F[idx1[j]];
-        dMin[i] = Math.min(...fTmp);
       }
+      dMin[i] = F[minIndex];
     }
     t++
   }
