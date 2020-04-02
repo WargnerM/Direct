@@ -98,19 +98,20 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
     let S1 = [];
     let S2 = [];
     let S3 = [];
-    let idx = d.find((e) => e === D[iMin]);
+    let idx = d.findIndex((e) => e === D[iMin]);
     let a = 0;
-
+    console.log(idx, F, dMin, D, d, L)
     for (let i = idx; i < d.length; i++) {
       let idx2 = [];
       for (let f = 0; f < F.length; f++) {
         if (F[f] === dMin[i]) {
+          console.log('pasa')
           if (D[f] === d[i]) idx2.push(f);
         }
       }
       S1 = S1.concat(idx2);
     }
-
+    console.log('s1',S1)
     if (d.length - idx > 1) { // toTest the condition
       let a1 = D[iMin];
       let b1 = F[iMin];
@@ -124,31 +125,37 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
           S2.push(j);
         }
       }
-      let xx, yy;
+      let xx = new Array(S2.length);
+      let yy = new Array(S2.length);
       for (let i = 0; i < S2.length; i++) {
-        xx = D[S2[i]];
-        yy = F[S2[i]];
+        xx[i] = [ D[S2[i]] ];
+        yy[i] = [ F[S2[i]] ];
       }
+      console.log('conhull input',xx, yy)
       let h = conhull(xx, yy);
+      console.log('conhull output', h)
+      S3 = new Array(h.length);
       for (let i = 0; i < h.length; i++) {
-        S3 = S2[h[i]];
+        S3[i] = S2[h[i]];
       }
     } else {
       S3 = S1;
     }
     S = S3;
-    
+    console.log('S', S)
     //--------------------------------------------------------------
     // STEPS 3,5: Select any rectangle j in S
     //--------------------------------------------------------------
     for (let por = 0; por < S.length; por++) {
       let j = S[por];
       let maxL = Math.max(...L[j]);
+      console.log('maxL', maxL);
       let I = [];
       for (let i = 0; i < L[j].length; i++) {
-        if (Math.abs(L[j][i] - maxL) < tolle) I.push(i)
+        if (Math.abs(L[j][i] - maxL) < tolle) I.push(i);
       }
-      let delta = (2 * maxL)/3;
+      console.log('I vector', I)
+      let delta = (2 * maxL) / 3;
       let w = [];
       for (let r = 0; r < I.length; r++) {
         let i = I[r]; //I[r] + 1; why plus one? i is the index of the dimension that will be splitted
@@ -169,13 +176,13 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
         C.push(cm1, cm2);
         F.push(fm1, fm2);
       }
-
+      console.log('C', C)
       let b = w.sort((a, b) => a[0] - b[0]);
 
       for (let r = 0; r < I.length; r++) {
         let u = I[b[r][1]];
-        let ix1 = m + (2 * (b[r] + 1)) - 1;
-        let ix2 = m + (2 * (b[r] + 1));
+        let ix1 = m + (2 * (b[r][1] + 1)) - 1;
+        let ix2 = m + (2 * (b[r][1] + 1));
         L[j][u] = delta / 2;
         L[ix1] = L[j].slice();
         L[ix2] = L[j].slice();
@@ -236,8 +243,9 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
       dMin[i] = F[minIndex];
     }
     t++
+    // console.log(dMin)
   }
-  
+  // console.log(dMin)
   //--------------------------------------------------------------
   //                  Saving results
   //--------------------------------------------------------------
@@ -288,5 +296,6 @@ function testFunction(x) {
 
 let xL = [-5, 0];
 let xU = [10, 15];
-let GLOBAL = { iterations: 2 };
-let result = Direct(testFunction, xL, xU, GLOBAL
+let GLOBAL = { iterations: 3 };
+let result = Direct(testFunction, xL, xU, GLOBAL)
+console.log(result);

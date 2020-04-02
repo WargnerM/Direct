@@ -9,9 +9,9 @@ module.exports = function conhull(x, y) {
     if (m !== y.length) {
         return
     }
-    if (m == 2) return [1, 2];
+    if (m == 2) return [0, 1];
 
-    if (m === 1) return [1];
+    if (m === 1) return [0];
 
     let start = 0;
     let v = 0;
@@ -45,7 +45,8 @@ module.exports = function conhull(x, y) {
             v = pred(v, m);
         }
     }
-    return h
+
+    return h.to1DArray();
 }
 
 function next(v, m) {
