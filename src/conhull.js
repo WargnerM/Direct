@@ -1,35 +1,34 @@
 let { Matrix, determinant } = require('ml-matrix');
 
 module.exports = function conhull(x, y) {
-    Matrix.checkMatrix(x);
-    Matrix.checkMatrix(y);
+    x = Matrix.checkMatrix(x);
+    y = Matrix.checkMatrix(y);
     if (x.rows === 1) x = x.transpose();
-    if (x.rows === 1) x = x.transpose();
-    let m = x.length;
-    if (m !== y.length) {
+    if (y.rows === 1) y = y.transpose();
+    let m = x.rows - 1;
+    if (x.rows !== y.rows) {
         return
     }
-    if (m == 2) return [0, 1];
+    if (m == 1) return [0, 1];
 
-    if (m === 1) return [0];
+    if (m === 0) return [0];
 
     let start = 0;
     let v = 0;
-    let w = x.length - 1;
-    
-    let h = new Matrix(1, m);
+    let w = x.rows - 1;
+    let h = new Matrix(m, 1);
     for (let i = 0; i < m; i++) {
-        h.set(0, i, i);
+        h.set(i, 0, i);
     }
-
+    console.log(x,h)
     let flag = 0;
     while (next(v, m) !== start || flag === 0) {
-        if (next(v, m) === w) flag =1;
+        if (next(v, m) === w) flag = 1;
 
         let a = v;
         let b = next(v, m);
         let c = next(next(v, w), m);
-
+        console.log(a, b, c)
         let matrix = new Matrix([ [ x.get(a, 0), y.get(a, 0), 1 ], [ x.get(b, 0), y.get(b, 0), 1 ], [x.get(c, 0), y.get(c, 0), 1 ] ]);
 
         if (determinant(matrix) >= 0) {
