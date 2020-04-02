@@ -31,9 +31,9 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
   if (xL.length !== xU.length) {
     throw new Error('Lower bounds and Upper bounds for x are not of the same length');
   }
-  if (global.C) {
-    global.C = Matrix.checkMatrix(global.C);
-  }
+  // if (global.C) {
+  //   global.C = Matrix.checkMatrix(global.C);
+  // }
   
   //-------------------------------------------------------------------------
   //                        STEP 1. Initialization
@@ -84,7 +84,7 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
     dMin = [fMin];
   }
 
-  let t = 0;
+  let t = 1;
 
   //-------------------------------------------------------------------------
   //                          Iteration loop
@@ -98,9 +98,8 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
     let S1 = [];
     let S2 = [];
     let S3 = [];
-    let idx = d.find((e) => e === D[iMin]);
+    let idx = d.findIndex((e) => e === D[iMin]);
     let a = 0;
-
     for (let i = idx; i < d.length; i++) {
       let idx2 = [];
       for (let f = 0; f < F.length; f++) {
@@ -110,7 +109,7 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
       }
       S1 = S1.concat(idx2);
     }
-
+    // console.log('s1',S1)
     if (d.length - idx > 1) { // toTest the condition
       let a1 = D[iMin];
       let b1 = F[iMin];
@@ -124,31 +123,37 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
           S2.push(j);
         }
       }
-      let xx, yy;
+      let xx = new Array(S2.length);
+      let yy = new Array(S2.length);
       for (let i = 0; i < S2.length; i++) {
-        xx = D[S2[i]];
-        yy = F[S2[i]];
+        xx[i] = [ D[S2[i]] ];
+        yy[i] = [ F[S2[i]] ];
       }
+      // console.log('conhull input',xx, yy)
       let h = conhull(xx, yy);
+      // console.log('conhull output', h)
+      S3 = new Array(h.length);
       for (let i = 0; i < h.length; i++) {
-        S3 = S2[h[i]];
+        S3[i] = S2[h[i]];
       }
     } else {
       S3 = S1;
     }
     S = S3;
-    
+    console.log('S', S)
     //--------------------------------------------------------------
     // STEPS 3,5: Select any rectangle j in S
     //--------------------------------------------------------------
     for (let por = 0; por < S.length; por++) {
       let j = S[por];
       let maxL = Math.max(...L[j]);
+      console.log('maxL', maxL);
       let I = [];
       for (let i = 0; i < L[j].length; i++) {
-        if (Math.abs(L[j][i] - maxL) < tolle) I.push(i)
+        if (Math.abs(L[j][i] - maxL) < tolle) I.push(i);
       }
-      let delta = (2 * maxL)/3;
+      console.log('I vector', I)
+      let delta = (2 * maxL) / 3;
       let w = [];
       for (let r = 0; r < I.length; r++) {
         let i = I[r]; //I[r] + 1; why plus one? i is the index of the dimension that will be splitted
@@ -169,13 +174,13 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
         C.push(cm1, cm2);
         F.push(fm1, fm2);
       }
-
+        // console.log('C', C)
       let b = w.sort((a, b) => a[0] - b[0]);
 
       for (let r = 0; r < I.length; r++) {
         let u = I[b[r][1]];
-        let ix1 = m + (2 * (b[r] + 1)) - 1;
-        let ix2 = m + (2 * (b[r] + 1));
+        let ix1 = m + (2 * (b[r][1]) + 1) - 1;
+        let ix2 = m + (2 * (b[r][1]) + 1);
         L[j][u] = delta / 2;
         L[ix1] = L[j].slice();
         L[ix2] = L[j].slice();
@@ -203,8 +208,8 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
         prevValue = newValue;
       }
     }
-    
 
+    d = D.slice();
     for (let i = 0; i !== d.length; i++) {
       let dTmp = d[i];
       let idx = [];
@@ -233,30 +238,36 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
           }
         }
       }
+      // console.log('minIndex',minIndex)
       dMin[i] = F[minIndex];
     }
+    console.log('F', F )
+    console.log('C', C);
+    console.log('dMin', dMin)
+    console.log('D',D )
+    console.log('d', d)
+    console.log('L', L)
+    console.log('fMin', fMin)
     t++
+    // console.log(dMin)
   }
-  
+  // console.log(dMin)
   //--------------------------------------------------------------
   //                  Saving results
   //--------------------------------------------------------------
-  /*
+
   let result = {};
-  result.f_k = fMin; // Best function value
-  result.Iter = iterations; // Number of iterations
+  result.fK = fMin; // Best function value
+  result.iterations = t; // Number of iterations
   
-  CC = new Matrix(C.rows, C.columns);
-  for (let i = 0; i < m; i++) { // Transform to original coordinates
-    let diff = x_U.sub(x_L);
-    let subMatrix = C.getColumnVector(i);
-    let newColumn = x_L.addM(subMatrix.mulM(diff)); // x_L + C(:,i).*(x_U-x_L)
-    CC.setColumn(i, newColumn);
+  
+  for (let j = 0; j < m; j++) { // Transform to original coordinates
+    for (let i = 0; i < xL.length; i++) {
+      C[j][i] = xL[i] + C[j][i] * diffBorders[i];
+    }
   }
-  */
   
-  /*
-  result.global = {};
+  // let global = {};
   global.C = C; // All sampled points in original coordinates
   global.F = F; // All function values computed
   global.D = D; // All distances
@@ -264,20 +275,20 @@ function Direct(fun, xL, xU, options = {}, entries = {}) {
   global.d = d;
   global.dMin = dMin;
   global.funCalls = funCalls;
+  result.global = global;
   // Find all points i with F(i)=f_min
-
   let index = 0;
   let xK = [];
-  for (let i = 0; i < F.columns; i++) {
-    if (F[i] === f_min) xK[index] = C[i]
+  for (let i = 0; i < F.length; i++) {
+    if (F[i] === fMin) xK.push(C[i]);
   }
-  result.x_k = xK;
-  */
+  result.xK = xK;
+  return result;
 }
 
-//--------------------------------------------------------
-//   Testing the algorithm with benchmark functions
-//-----------------------------------------------------
+// //--------------------------------------------------------
+// //   Testing the algorithm with benchmark functions
+// //-----------------------------------------------------
 
 function testFunction(x) {
   let a = (x[1] - 5 * Math.pow(x[0], 2) / (4 * Math.pow(Math.PI, 2)) + 5 * x[0] / Math.PI - 6);
@@ -288,5 +299,7 @@ function testFunction(x) {
 
 let xL = [-5, 0];
 let xU = [10, 15];
-let GLOBAL = { iterations: 2 };
-let result = Direct(testFunction, xL, xU, GLOBAL
+let GLOBAL = { iterations: 20};
+let result = Direct(testFunction, xL, xU, GLOBAL);
+console.log('-___----------_____RESULT-____----------___');
+console.log(result);
