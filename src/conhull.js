@@ -20,7 +20,7 @@ module.exports = function conhull(x, y) {
     for (let i = 0; i < m; i++) {
         h.set(i, 0, i);
     }
-    console.log(x,h)
+
     let flag = 0;
     while (next(v, m) !== start || flag === 0) {
         if (next(v, m) === w) flag = 1;
@@ -28,7 +28,7 @@ module.exports = function conhull(x, y) {
         let a = v;
         let b = next(v, m);
         let c = next(next(v, w), m);
-        console.log(a, b, c)
+    
         let matrix = new Matrix([ [ x.get(a, 0), y.get(a, 0), 1 ], [ x.get(b, 0), y.get(b, 0), 1 ], [x.get(c, 0), y.get(c, 0), 1 ] ]);
 
         if (determinant(matrix) >= 0) {
