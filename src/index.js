@@ -60,7 +60,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     dMin = initialState.dMin;
     funCalls = initialState.funCalls;
 
-    fMin = Math.min(...F);
+    fMin = getMinValue(F);
     E = epsilon * Math.abs(fMin) > 1e-8 ? epsilon * Math.abs(fMin) : 1e-8;
     iMin = getIndexOfMin(F, D, E, fMin);
 
@@ -211,7 +211,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     //--------------------------------------------------------------
     //                  Update
     //--------------------------------------------------------------
-    fMin = Math.min(...F);
+    fMin = getMinValue(F);
     E =
       options.epsilon * Math.abs(fMin) > 1e-8
         ? options.epsilon * Math.abs(fMin)
@@ -305,6 +305,14 @@ function getIndexOfMin(F, D, E, fMin) {
   return index;
 }
 
+function getMinValue(F) {
+  let nbPoints = F.length;
+  let minValue = F[0];
+  for (let i = 1; i < nbPoints; i++) {
+    if (minValue > F[i])  minValue = F[i];
+  }
+  return minValue;
+}
 
 // //--------------------------------------------------------
 // //   Testing the algorithm with benchmark functions
