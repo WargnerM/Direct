@@ -219,26 +219,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
 
     iMin = getIndexOfMin(F, D, E, fMin);
 
-    d = D.slice();
-    // console.log(d.length)
-    for (let i = 0; i < d.length; i++) {
-      let dTmp = d[i];
-      let idx = [];
-      for (let di = 0; di < d.length; di++) {
-        if (d[di] !== dTmp) idx.push(di);
-      }
-      
-      let newD = new Array(idx.length + 1);
-      // console.log(Math.max(...idx) < d.length)
-      newD[0] = dTmp;
-
-      // console.log(JSON.stringify(d),  i, idx.length, d.length,d[0], dTmp)
-      for (let k = 0, kk = 1; k < idx.length; k++) {
-        newD[kk++] = d[idx[k]];
-      }
-      d = newD;
-    }
-    // console.log(d)
+    d = Array.from(new Set(D));
     d = d.sort((a, b) => a - b);
 
     dMin = new Array(d.length);
