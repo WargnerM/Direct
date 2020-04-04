@@ -286,11 +286,13 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   // Find all points i with F(i)=f_min
   let xK = [];
   for (let i = 0; i < F.length; i++) {
-    if (F[i] === fMin) xK.push(C[i]);
+    if (Math.abs(F[i] - fMin) < 1e-8) xK.push(C[i]);
   }
   result.optimum = xK;
   return result;
 }
+
+module.exports.direct = Direct;
 
 function getIndexOfMin(F, D, E, fMin) {
   let index;
