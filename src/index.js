@@ -60,7 +60,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     dMin = initialState.dMin;
     funCalls = initialState.funCalls;
 
-    fMin = Math.min(...F);
+    fMin = getMinValue(F);
     E = epsilon * Math.abs(fMin) > 1e-8 ? epsilon * Math.abs(fMin) : 1e-8;
     iMin = getIndexOfMin(F, D, E, fMin);
 
@@ -211,7 +211,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     //--------------------------------------------------------------
     //                  Update
     //--------------------------------------------------------------
-    fMin = Math.min(...F);
+    fMin = getMinValue(F);
     E =
       options.epsilon * Math.abs(fMin) > 1e-8
         ? options.epsilon * Math.abs(fMin)
@@ -219,26 +219,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
 
     iMin = getIndexOfMin(F, D, E, fMin);
 
-    d = D.slice();
-    // console.log(d.length)
-    for (let i = 0; i < d.length; i++) {
-      let dTmp = d[i];
-      let idx = [];
-      for (let di = 0; di < d.length; di++) {
-        if (d[di] !== dTmp) idx.push(di);
-      }
-      
-      let newD = new Array(idx.length + 1);
-      // console.log(Math.max(...idx) < d.length)
-      newD[0] = dTmp;
-
-      // console.log(JSON.stringify(d),  i, idx.length, d.length,d[0], dTmp)
-      for (let k = 0, kk = 1; k < idx.length; k++) {
-        newD[kk++] = d[idx[k]];
-      }
-      d = newD;
-    }
-    // console.log(d)
+    d = Array.from(new Set(D));
     d = d.sort((a, b) => a - b);
 
     dMin = new Array(d.length);
@@ -286,11 +267,13 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   // Find all points i with F(i)=f_min
   let xK = [];
   for (let i = 0; i < F.length; i++) {
-    if (F[i] === fMin) xK.push(C[i]);
+    if (Math.abs(F[i] - fMin) < 1e-8) xK.push(C[i]);
   }
   result.optimum = xK;
   return result;
 }
+
+module.exports.direct = Direct;
 
 function getIndexOfMin(F, D, E, fMin) {
   let index;
@@ -305,6 +288,14 @@ function getIndexOfMin(F, D, E, fMin) {
   return index;
 }
 
+function getMinValue(F) {
+  let nbPoints = F.length;
+  let minValue = F[0];
+  for (let i = 1; i < nbPoints; i++) {
+    if (minValue > F[i])  minValue = F[i];
+  }
+  return minValue;
+}
 
 // //--------------------------------------------------------
 // //   Testing the algorithm with benchmark functions

@@ -9,18 +9,17 @@ module.exports = function conhull(x, y) {
     if (x.rows !== y.rows) {
         return
     }
-    if (m == 1) return [0, 1];
+    if (m === 1) return [0, 1];
 
     if (m === 0) return [0];
 
     let start = 0;
     let v = 0;
     let w = x.rows - 1;
-    let h = new Matrix(m, 1);
-    for (let i = 0; i < m; i++) {
+    let h = new Matrix(m + 1, 1);
+    for (let i = 0; i < h.rows; i++) {
         h.set(i, 0, i);
     }
-
     let flag = 0;
     while (next(v, m) !== start || flag === 0) {
         if (next(v, m) === w) flag = 1;
@@ -38,7 +37,6 @@ module.exports = function conhull(x, y) {
             x.removeRow(j);
             y.removeRow(j);
             h.removeRow(j);
-
             m -= 1;
             w -= 1;
             v = pred(v, m);
