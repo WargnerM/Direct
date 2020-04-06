@@ -44,7 +44,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   let funCalls = 0;
   let n = xL.length;
   let tolle = 1e-16;
-  let tolle2 = 1e-12;
+  let tolle2 = 1e-10;
   let dMin = initialState.dMin;
   let diffBorders = xU.map((x, i) => x - xL[i]);
 
@@ -87,7 +87,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     dMin = [fMin];
   }
 
-  let t = 1;
+  let t = 0;
   // console.log('F', F )
   //   console.log('C', C);
   //   console.log('dMin', dMin)
@@ -101,6 +101,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   //-------------------------------------------------------------------------
 
   while (t < options.iterations) {
+    // console.log('iteracion ', t)
     //----------------------------------------------------------------------
     //  STEP 2. Identify the set S of all potentially optimal rectangles
     //----------------------------------------------------------------------
@@ -109,31 +110,49 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     let S2 = [];
     let S3 = [];
     let idx = d.findIndex((e) => e === D[iMin]);
+    // console.log('d', d)
+    // console.log('dmin', dMin)
+    // console.log('F', F);
+    // console.log('D', D)
+    // console.log('C',C)
+    // console.log('L', L)
     for (let i = idx; i < d.length; i++) {
-      let idx2 = [];
       for (let f = 0; f < F.length; f++) {
         if (F[f] === dMin[i]) {
-          if (D[f] === d[i]) idx2.push(f);
+          if (D[f] === d[i]) S1.push(f);
         }
       }
-      S1 = S1.concat(idx2);
     }
-    // console.log('s1',S1)
-    // console.log(d.length - idx > 1)
-    if (d.length - idx > 1) {
+    // console.log('s1', D.length, S1.length)
+    // console.log('idx')
+    // console.log(d.length, idx)
+    if (d.length - idx > 2) {
       // toTest the condition
       let a1 = D[iMin];
       let b1 = F[iMin];
       let a2 = d[d.length - 1];
       let b2 = dMin[d.length - 1];
       let slope = (b2 - b1) / (a2 - a1);
+      // console.log('slope',slope)
       let constant = b1 - slope * a1;
+      // console.log('const', constant);
+      // console.log(a1, a2, b1, b2);
+      // console.log('datosaoeuh')
+      let ff = [];
+      let dd = [];
+      // console.log('s1', S1)
       for (let i = 0; i < S1.length; i++) {
         let j = S1[i];
+        // ff.push(F[j])
+        //   dd.push(D[j])
+          // console.log(F[j], slope * D[j] + constant + tolle2)
         if (F[j] <= slope * D[j] + constant + tolle2) {
           S2.push(j);
         }
       }
+      // console.log(JSON.stringify(ff),'\n', JSON.stringify(dd))
+      // console.log('s2', S2.length)
+      // console.log('s2', S2)
       let xx = new Array(S2.length);
       let yy = new Array(S2.length);
       for (let i = 0; i < S2.length; i++) {
@@ -142,11 +161,16 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       }
       // console.log('conhull input',xx, yy)
       let h = conhull(xx, yy);
-      // console.log('conhull output', h)
+      // console.log('conhull output', h.length)
+      // let fh =  new Array(h.length);
+      // let dh =  new Array(h.length);
       S3 = new Array(h.length);
       for (let i = 0; i < h.length; i++) {
         S3[i] = S2[h[i]];
+        // fh[i] = F[S2[h[i]]]
+        // dh[i] = D[S2[h[i]]]
       }
+      // console.log(JSON.stringify(fh),'\n', JSON.stringify(dh))
     } else {
       S3 = S1;
     }
@@ -157,7 +181,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     //--------------------------------------------------------------
     for (let por = 0; por < S.length; por++) {
       let j = S[por];
-      let maxL = Math.max(...L[j]);
+      let maxL = getMaxValue(L[j]);
       // console.log('maxL', maxL);
       let I = [];
       for (let i = 0; i < L[j].length; i++) {
@@ -192,9 +216,9 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
 
       for (let r = 0; r < I.length; r++) {
         let u = I[b[r][1]];
-        let ix1 = m + (2 * b[r][1] + 1) - 1;
-        let ix2 = m + (2 * b[r][1] + 1);
-        // console.log(ix1, ix2);
+        let ix1 = m + 2 * (b[r][1] + 1) - 1;
+        let ix2 = m + 2 * (b[r][1] + 1);
+        // console.log('index index', m, ix1, ix2);
         L[j][u] = delta / 2;
         L[ix1] = L[j].slice();
         L[ix2] = L[j].slice();
@@ -219,7 +243,9 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
 
     iMin = getIndexOfMin(F, D, E, fMin);
 
+    // console.log('length D', D.length)
     d = Array.from(new Set(D));
+    // console.log('pasa')
     d = d.sort((a, b) => a - b);
 
     dMin = new Array(d.length);
@@ -237,6 +263,8 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       // console.log('minIndex',minIndex)
       dMin[i] = F[minIndex];
     }
+    console.log(t)
+    console.log('C length', C.length);
     // console.log('F', F )
     // console.log('C', C);
     // console.log('dMin', dMin)
@@ -244,7 +272,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     // console.log('d', d)
     // console.log('L', L)
     // console.log('fMin', fMin)
-    t++;
+    t += 1;
     // console.log(dMin)
   }
   // console.log(dMin)
@@ -267,7 +295,8 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   // Find all points i with F(i)=f_min
   let xK = [];
   for (let i = 0; i < F.length; i++) {
-    if (Math.abs(F[i] - fMin) < 1e-8) xK.push(C[i]);
+    if (F[i] === fMin) xK.push(C[i]);
+    // if (Math.abs(F[i] - fMin) < tolle) xK.push(C[i]);
   }
   result.optimum = xK;
   return result;
@@ -297,35 +326,44 @@ function getMinValue(F) {
   return minValue;
 }
 
+function getMaxValue(F) {
+  let nbPoints = F.length;
+  let maxValue = F[0];
+  for (let i = 1; i < nbPoints; i++) {
+    if (maxValue < F[i])  maxValue = F[i];
+  }
+  return maxValue;
+}
+
 // //--------------------------------------------------------
 // //   Testing the algorithm with benchmark functions
 // //-----------------------------------------------------
 
-function testFunction(x) {
-  let a =
-    x[1] -
-    (5 * Math.pow(x[0], 2)) / (4 * Math.pow(Math.PI, 2)) +
-    (5 * x[0]) / Math.PI -
-    6;
-  let b = 10 * (1 - 1 / (8 * Math.PI)) * Math.cos(x[0]) + 10;
-  let result = Math.pow(a, 2) + b;
-  return result;
-}
+// function testFunction(x) {
+//   let a =
+//     x[1] -
+//     (5 * Math.pow(x[0], 2)) / (4 * Math.pow(Math.PI, 2)) +
+//     (5 * x[0]) / Math.PI -
+//     6;
+//   let b = 10 * (1 - 1 / (8 * Math.PI)) * Math.cos(x[0]) + 10;
+//   let result = Math.pow(a, 2) + b;
+//   return result;
+// }
 
-let xL = [-5, 0];
-let xU = [10, 15];
-let options = { iterations: 20 };
-let result = Direct(testFunction, xL, xU, options);
-console.log('__________--------____________\n\n\n\n')
-console.log(result.optimum, result.iterations, result.finalState.C.length, result.finalState.funCalls)
-console.log('__________--------____________')
+// let xL = [-5, 0];
+// let xU = [10, 15];
+// let options = { iterations: 6 };
+// let result = Direct(testFunction, xL, xU, options);
+// console.log('__________--------____________\n\n\n\n')
+// console.log(result.optimum, result.iterations, result.finalState.C.length, result.finalState.funCalls)
+// console.log('__________--------____________')
 // console.log(result);
-let result2 = Direct(testFunction, xL, xU, options, result.finalState);
-console.log(result2.optimum, result2.iterations, result2.finalState.C.length, result2.finalState.funCalls)
+// let result2 = Direct(testFunction, xL, xU, options, result.finalState);
+// console.log(result2.optimum, result2.iterations, result2.finalState.C.length, result2.finalState.funCalls)
 // for (let i = 0; i < 19; i++) {
 //   console.time('hola');
 //   let result = Direct(testFunction, xL, xU, GLOBAL);
 //   console.timeEnd('hola');
 // }
 // console.log('-___----------_____RESULT-____----------___');
-// console.log(result);
+// console.log(rCesult);
