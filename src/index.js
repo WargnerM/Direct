@@ -1,7 +1,10 @@
 'use strict';
-
-let Matrix = require('ml-matrix').Matrix;
-let conhull = require('../src/conhull.js');
+const fs = require('fs');
+const path = require('path');
+const Matrix = require('ml-matrix').Matrix;
+const isAnyArray= require('is-any-array');
+console.log('isa', isAnyArray)
+const conhull = require('../src/conhull.js');
 
 /**
  * Creates new PCA (Principal Component Analysis) from the dataset
@@ -26,6 +29,14 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     throw new Error('There is something undefined');
   }
 
+  if (isAnyArray.default(xL)) {
+    xL = new Float32Array(xL);
+  }
+
+  if (isAnyArray.default(xU)) {
+    xU = new Float32Array(xU);
+  }
+
   if (xL.length !== xU.length) {
     throw new Error(
       'Lower bounds and Upper bounds for x are not of the same length',
@@ -44,7 +55,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   let funCalls = 0;
   let n = xL.length;
   let tolle = 1e-16;
-  let tolle2 = 1e-10;
+  let tolle2 = 1e-6;
   let dMin = initialState.dMin;
   let diffBorders = xU.map((x, i) => x - xL[i]);
 
@@ -72,15 +83,15 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     }
   } else {
     m = 0;
-    C = [new Array(n).fill(0.5)];
-    let xM = [];
+    C = [new Float32Array(n).fill(0.5)];
+    let xM = new Float32Array(n);
     for (let i = 0; i < xL.length; i++) {
       xM[i] = xL[i] + C[0][i] * diffBorders[i];
     }
     fMin = fun(xM);
     funCalls = funCalls + 1;
     iMin = 0;
-    L = [new Array(n).fill(0.5)];
+    L = [new Float32Array(n).fill(0.5)];
     D = [Math.sqrt(n * Math.pow(0.5, 2))];
     F = [fMin];
     d = D;
@@ -105,10 +116,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     //----------------------------------------------------------------------
     //  STEP 2. Identify the set S of all potentially optimal rectangles
     //----------------------------------------------------------------------
-    let S = [];
-    let S1 = [];
-    let S2 = [];
-    let S3 = [];
+    let S1 = new Uint32Array(F.length);
     let idx = d.findIndex((e) => e === D[iMin]);
     // console.log('d', d)
     // console.log('dmin', dMin)
@@ -116,16 +124,20 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     // console.log('D', D)
     // console.log('C',C)
     // console.log('L', L)
+    let last = 0;
     for (let i = idx; i < d.length; i++) {
       for (let f = 0; f < F.length; f++) {
         if (F[f] === dMin[i]) {
-          if (D[f] === d[i]) S1.push(f);
+          if (D[f] === d[i]) {
+            S1[last++] = f;
+          }
         }
       }
     }
     // console.log('s1', D.length, S1.length)
     // console.log('idx')
     // console.log(d.length, idx)
+    let S, S3;
     if (d.length - idx > 2) {
       // toTest the condition
       let a1 = D[iMin];
@@ -141,30 +153,33 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       let ff = [];
       let dd = [];
       // console.log('s1', S1)
-      for (let i = 0; i < S1.length; i++) {
+      let S2 = new Uint32Array(last);
+      last = 0;
+      for (let i = 0; i < S2.length; i++) {
         let j = S1[i];
         // ff.push(F[j])
-        //   dd.push(D[j])
+          // dd.push(D[j])
+          // console.log(D[j]);
           // console.log(F[j], slope * D[j] + constant + tolle2)
         if (F[j] <= slope * D[j] + constant + tolle2) {
-          S2.push(j);
+          S2[last++] = j;
         }
       }
       // console.log(JSON.stringify(ff),'\n', JSON.stringify(dd))
       // console.log('s2', S2.length)
       // console.log('s2', S2)
-      let xx = new Array(S2.length);
-      let yy = new Array(S2.length);
-      for (let i = 0; i < S2.length; i++) {
+      let xx = new Array(last);
+      let yy = new Array(last);
+      for (let i = 0; i < xx.length; i++) {
         xx[i] = [D[S2[i]]];
         yy[i] = [F[S2[i]]];
       }
-      // console.log('conhull input',xx, yy)
+      // console.log('conhull input',xx, yy, S2, S1)
       let h = conhull(xx, yy);
       // console.log('conhull output', h.length)
       // let fh =  new Array(h.length);
       // let dh =  new Array(h.length);
-      S3 = new Array(h.length);
+      S3 = new Uint32Array(h.length);
       for (let i = 0; i < h.length; i++) {
         S3[i] = S2[h[i]];
         // fh[i] = F[S2[h[i]]]
@@ -172,7 +187,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       }
       // console.log(JSON.stringify(fh),'\n', JSON.stringify(dh))
     } else {
-      S3 = S1;
+      S3 = S1.slice(0, last);
     }
     S = S3;
     // console.log('S', S)
@@ -183,22 +198,24 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       let j = S[por];
       let maxL = getMaxValue(L[j]);
       // console.log('maxL', maxL);
-      let I = [];
+      let I = new Uint32Array(L[j].length);
+      last = 0;
       for (let i = 0; i < L[j].length; i++) {
-        if (Math.abs(L[j][i] - maxL) < tolle) I.push(i);
+        if (Math.abs(L[j][i] - maxL) < tolle) I[last++] = i;
       }
-      // console.log('I vector', I)
+      // console.log('I vector', I, last);
       let delta = (2 * maxL) / 3;
-      let w = [];
-      for (let r = 0; r < I.length; r++) {
+      let w = new Array(last);
+      for (let r = 0; r < last; r++) {
         let i = I[r];
         let cm1 = C[j].slice();
         let cm2 = C[j].slice();
+        // console.log('cm1', cm1)
         cm1[i] += delta;
         cm2[i] -= delta;
-
-        let xm1 = [];
-        let xm2 = [];
+        // console.log('cm1', cm1)
+        let xm1 = new Float32Array(cm1.length);
+        let xm2 = new Float32Array(cm1.length);
         for (let i = 0; i < cm1.length; i++) {
           xm1[i] = xL[i] + cm1[i] * diffBorders[i];
           xm2[i] = xL[i] + cm2[i] * diffBorders[i];
@@ -210,11 +227,10 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
         C.push(cm1, cm2);
         F.push(fm1, fm2);
       }
-
+      // console.log('w', w)
       // console.log('C', C)
       let b = w.sort((a, b) => a[0] - b[0]);
-
-      for (let r = 0; r < I.length; r++) {
+      for (let r = 0; r < last; r++) {
         let u = I[b[r][1]];
         let ix1 = m + 2 * (b[r][1] + 1) - 1;
         let ix2 = m + 2 * (b[r][1] + 1);
@@ -230,11 +246,12 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
         D[ix1] = D[j];
         D[ix2] = D[j];
       }
-      m += 2 * I.length;
+      m += 2 * last;
     }
     //--------------------------------------------------------------
     //                  Update
     //--------------------------------------------------------------
+    // console.log('F', F)
     fMin = getMinValue(F);
     E =
       options.epsilon * Math.abs(fMin) > 1e-8
@@ -263,15 +280,28 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       // console.log('minIndex',minIndex)
       dMin[i] = F[minIndex];
     }
-    console.log(t)
-    console.log('C length', C.length);
+    console.log('iteracion----', t)
+    // console.log('C length', C.length);
     // console.log('F', F )
-    // console.log('C', C);
+    let currentMin = [];
+    for (let j = 0; j < F.length; j++) {
+      if (F[j] === fMin) {
+        let temp = [];
+        for (let i = 0; i < xL.length; i++) {
+          temp[i] = xL[i] + C[j][i] * diffBorders[i];
+        }
+        currentMin.push(temp.slice());
+      }
+      // if (Math.abs(F[i] - fMin) < tolle) xK.push(C[i]);
+    }
+    fs.appendFileSync('optimum', JSON.stringify(currentMin) + ',')
+    console.log('C', C.length, fMin);
     // console.log('dMin', dMin)
     // console.log('D',D )
     // console.log('d', d)
     // console.log('L', L)
     // console.log('fMin', fMin)
+    // console.log('diff', diffBorders)
     t += 1;
     // console.log(dMin)
   }
@@ -295,7 +325,9 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   // Find all points i with F(i)=f_min
   let xK = [];
   for (let i = 0; i < F.length; i++) {
-    if (F[i] === fMin) xK.push(C[i]);
+    if (F[i] === fMin) {
+      xK.push(C[i]);
+    }
     // if (Math.abs(F[i] - fMin) < tolle) xK.push(C[i]);
   }
   result.optimum = xK;
