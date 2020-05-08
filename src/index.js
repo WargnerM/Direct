@@ -3,8 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const Matrix = require('ml-matrix').Matrix;
 const isAnyArray= require('is-any-array');
-console.log('isa', isAnyArray)
-const conhull = require('../src/conhull.js');
+const conhull = require('./util/conhull');
 
 /**
  * Creates new PCA (Principal Component Analysis) from the dataset
@@ -29,11 +28,11 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     throw new Error('There is something undefined');
   }
 
-  if (isAnyArray.default(xL)) {
+  if (isAnyArray(xL)) {
     xL = new Float32Array(xL);
   }
 
-  if (isAnyArray.default(xU)) {
+  if (isAnyArray(xU)) {
     xU = new Float32Array(xU);
   }
 
@@ -42,9 +41,6 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       'Lower bounds and Upper bounds for x are not of the same length',
     );
   }
-  // if (global.C) {
-  //   global.C = Matrix.checkMatrix(global.C);
-  // }
 
   //-------------------------------------------------------------------------
   //                        STEP 1. Initialization
@@ -106,7 +102,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   //   console.log('d', d)
   //   console.log('L', L)
   //   console.log('fMin', fMin)
-    console.log('load data')
+  // console.log('load data')
   //-------------------------------------------------------------------------
   //                          Iteration loop
   //-------------------------------------------------------------------------
@@ -280,7 +276,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       // console.log('minIndex',minIndex)
       dMin[i] = F[minIndex];
     }
-    console.log('iteracion----', t)
+    // console.log('iteracion----', t)
     // console.log('C length', C.length);
     // console.log('F', F )
     let currentMin = [];
@@ -295,7 +291,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       // if (Math.abs(F[i] - fMin) < tolle) xK.push(C[i]);
     }
     fs.appendFileSync('optimum', JSON.stringify(currentMin) + ',')
-    console.log('C', C.length, fMin);
+    // console.log('C', C.length, fMin);
     // console.log('dMin', dMin)
     // console.log('D',D )
     // console.log('d', d)
@@ -334,7 +330,7 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   return result;
 }
 
-module.exports.direct = Direct;
+module.exports = Direct;
 
 function getIndexOfMin(F, D, E, fMin) {
   let index;
