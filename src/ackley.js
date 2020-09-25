@@ -30,5 +30,5 @@ function ackley(x, options = {}) {
 }
 const npoints = 40 * 1024;
 let x = new Array(npoints).fill(5).map((a, i) => a + i);
-console.log(ackley(x));
+
 

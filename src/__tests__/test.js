@@ -32,7 +32,7 @@ describe('test myModule', () => {
     y = sumOfPseudoVoigt(x, pTrue, [0]);
     // console.log(y, x, pTrue)
 
-    let result = optimizePseudoVoigtSum([x, y], group, {iterations: 60, initialState: {}})
+    let result = optimizePseudoVoigtSum([x, y], group, {iterations: 10, initialState: {}})
     console.log(result.optimum[0], pTrue);
     expect(true).toEqual(true);
   });

@@ -1,9 +1,8 @@
 'use strict';
-const fs = require('fs');
-const path = require('path');
+// const fs = require('fs');
+// const path = require('path');
 const Matrix = require('ml-matrix').Matrix;
 const isAnyArray= require('is-any-array');
-console.log('isa', isAnyArray)
 const conhull = require('../src/conhull.js');
 
 /**
@@ -21,9 +20,12 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     iterations: 50,
     epsilon: 1e-4,
     tol: 0.01,
+    itActive: xL.map(e => true),
   };
 
   options = Object.assign({}, opts, options);
+
+  const itActive = options.itActive;
 
   if (fun === undefined || xL === undefined || xU === undefined) {
     throw new Error('There is something undefined');
@@ -59,10 +61,11 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   let dMin = initialState.dMin;
   let diffBorders = xU.map((x, i) => x - xL[i]);
 
+  let guess = options.guess ? options.guess : diffBorders.map((e) => e / 2);
   let F, m, D, L, d, fMin, E, iMin, C;
   if (initialState.C && initialState.C.length > 0) {
 
-    console.log('entra initial');
+    // console.log('entra initial');
     F = initialState.F;
     m = F.length - 1;
     D = initialState.D;
@@ -83,16 +86,15 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     }
   } else {
     m = 0;
-    C = [new Float32Array(n).fill(0.5)];
-    let xM = new Float32Array(n);
+    C = [guess];
     for (let i = 0; i < xL.length; i++) {
-      xM[i] = xL[i] + C[0][i] * diffBorders[i];
+      C[0][i] = (C[0][i] - xL[i]) / diffBorders[i];
     }
-    fMin = fun(xM);
+    fMin = fun(guess);
     funCalls = funCalls + 1;
     iMin = 0;
-    L = [new Float32Array(n).fill(0.5)];
-    D = [Math.sqrt(n * Math.pow(0.5, 2))];
+    L = [C[0].slice()];
+    D = [Math.sqrt(C[0].reduce((a, c) => c * c + a, 0))];//[Math.sqrt(n * Math.pow(0.5, 2))];
     F = [fMin];
     d = D;
     dMin = [fMin];
@@ -106,7 +108,6 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
   //   console.log('d', d)
   //   console.log('L', L)
   //   console.log('fMin', fMin)
-    console.log('load data')
   //-------------------------------------------------------------------------
   //                          Iteration loop
   //-------------------------------------------------------------------------
@@ -150,8 +151,8 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       // console.log('const', constant);
       // console.log(a1, a2, b1, b2);
       // console.log('datosaoeuh')
-      let ff = [];
-      let dd = [];
+      // let ff = [];
+      // let dd = [];
       // console.log('s1', S1)
       let S2 = new Uint32Array(last);
       last = 0;
@@ -166,7 +167,6 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
         }
       }
       // console.log(JSON.stringify(ff),'\n', JSON.stringify(dd))
-      // console.log('s2', S2.length)
       // console.log('s2', S2)
       let xx = new Array(last);
       let yy = new Array(last);
@@ -196,14 +196,14 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
     //--------------------------------------------------------------
     for (let por = 0; por < S.length; por++) {
       let j = S[por];
-      let maxL = getMaxValue(L[j]);
+      let maxL = getMaxValue(L[j], itActive);
       // console.log('maxL', maxL);
       let I = new Uint32Array(L[j].length);
       last = 0;
       for (let i = 0; i < L[j].length; i++) {
+        if (!itActive[i]) continue;
         if (Math.abs(L[j][i] - maxL) < tolle) I[last++] = i;
       }
-      // console.log('I vector', I, last);
       let delta = (2 * maxL) / 3;
       let w = new Array(last);
       for (let r = 0; r < last; r++) {
@@ -213,6 +213,8 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
         // console.log('cm1', cm1)
         cm1[i] += delta;
         cm2[i] -= delta;
+        if (cm1[i] < 0 || cm1[i] > 1) cm1[i] = Math.random(22);
+        if (cm2[i] < 0 || cm2[i] > 1) cm2[i] = Math.random(22);
         // console.log('cm1', cm1)
         let xm1 = new Float32Array(cm1.length);
         let xm2 = new Float32Array(cm1.length);
@@ -280,22 +282,23 @@ function Direct(fun, xL, xU, options = {}, initialState = {}) {
       // console.log('minIndex',minIndex)
       dMin[i] = F[minIndex];
     }
-    console.log('iteracion----', t)
+    // console.log('iteracion----', t)
     // console.log('C length', C.length);
     // console.log('F', F )
-    let currentMin = [];
-    for (let j = 0; j < F.length; j++) {
-      if (F[j] === fMin) {
-        let temp = [];
-        for (let i = 0; i < xL.length; i++) {
-          temp[i] = xL[i] + C[j][i] * diffBorders[i];
-        }
-        currentMin.push(temp.slice());
-      }
-      // if (Math.abs(F[i] - fMin) < tolle) xK.push(C[i]);
-    }
-    fs.appendFileSync('optimum', JSON.stringify(currentMin) + ',')
-    console.log('C', C.length, fMin);
+    // let currentMin = [];
+    // for (let j = 0; j < F.length; j++) {
+    //   if (F[j] === fMin) {
+    //     let temp = [];
+    //     for (let i = 0; i < xL.length; i++) {
+    //       temp[i] = xL[i] + C[j][i] * diffBorders[i];
+    //     }
+    //     currentMin.push(temp.slice());
+    //   }
+    //   // if (Math.abs(F[i] - fMin) < tolle) xK.push(C[i]);
+    // }
+    // console.log('currentMin', JSON.stringify(currentMin[0].map(e => e.toFixed(2))));
+    // fs.appendFileSync('optimum', JSON.stringify(currentMin) + ',')
+    // console.log('C', C.length, fMin);
     // console.log('dMin', dMin)
     // console.log('D',D )
     // console.log('d', d)
@@ -358,11 +361,11 @@ function getMinValue(F) {
   return minValue;
 }
 
-function getMaxValue(F) {
+function getMaxValue(F, itActive) {
   let nbPoints = F.length;
-  let maxValue = F[0];
-  for (let i = 1; i < nbPoints; i++) {
-    if (maxValue < F[i])  maxValue = F[i];
+  let maxValue = Number.MIN_SAFE_INTEGER;
+  for (let i = 0; i < nbPoints; i++) {
+    if (itActive[i] && maxValue < F[i])  maxValue = F[i];
   }
   return maxValue;
 }

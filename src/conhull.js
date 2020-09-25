@@ -20,6 +20,7 @@ module.exports = function conhull(x, y) {
     for (let i = 0; i < h.rows; i++) {
         h.set(i, 0, i);
     }
+    // console.log(h.rows, y.rows, x.rows)
     let flag = 0;
     while (next(v, m) !== start || flag === 0) {
         if (next(v, m) === w) flag = 1;
